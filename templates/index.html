@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WatsonX Voice Agent</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f4f4f4;
+            display: flex; align-items: center;
+            justify-content: center; min-height: 100vh;
+        }
+        .container {
+            background: white; border-radius: 16px;
+            padding: 40px; width: 100%; max-width: 680px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        h1 { font-size: 22px; color: #161616; margin-bottom: 6px; }
+        .subtitle { font-size: 14px; color: #525252; margin-bottom: 28px; }
+
+        .record-area {
+            display: flex; flex-direction: column;
+            align-items: center; gap: 16px;
+            padding: 28px; border: 2px dashed #e0e0e0;
+            border-radius: 12px; margin-bottom: 20px;
+        }
+        .pulse-ring {
+            width: 72px; height: 72px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px;
+            background: #f4f4f4; transition: all 0.3s;
+        }
+        .pulse-ring.recording {
+            background: #fff1f1; animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(218,30,40,0.3); }
+            50% { box-shadow: 0 0 0 14px rgba(218,30,40,0); }
+        }
+
+        .btn {
+            padding: 12px 28px; border: none; border-radius: 8px;
+            font-size: 15px; font-weight: 500; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-record  { background: #0f62fe; color: white; }
+        .btn-stop    { background: #da1e28; color: white; display: none; }
+        .btn-disabled { background: #c6c6c6; color: #6f6f6f; cursor: not-allowed; }
+
+        #statusText { font-size: 13px; color: #525252; }
+
+        .result-box {
+            border-radius: 10px; padding: 16px 20px;
+            margin-top: 14px; display: none;
+        }
+        .result-box.transcript { background: #f0f4ff; border-left: 4px solid #0f62fe; }
+        .result-box.ai-resp    { background: #f0fff4; border-left: 4px solid #24a148; }
+        .result-label { font-size: 11px; font-weight: 600; text-transform: uppercase;
+                        letter-spacing: 0.5px; color: #525252; margin-bottom: 8px; }
+        .result-text  { font-size: 15px; color: #161616; line-height: 1.6; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>WatsonX Voice-to-Text Agent</h1>
+    <p class="subtitle">Powered by IBM Watson Speech to Text + WatsonX.ai Granite LLM</p>
+
+    <div class="record-area">
+        <div class="pulse-ring" id="pulseRing">🎙</div>
+        <div id="statusText">Press the button below and start speaking</div>
+        <div style="display:flex; gap:12px;">
+            <button class="btn btn-record" id="recordBtn" onclick="startRecording()">
+                Start Recording
+            </button>
+            <button class="btn btn-stop" id="stopBtn" onclick="stopRecording()">
+                Stop & Transcribe
+            </button>
+        </div>
+    </div>
+
+    <div class="result-box transcript" id="transcriptBox">
+        <div class="result-label">You said (Watson STT)</div>
+        <div class="result-text" id="transcriptText"></div>
+    </div>
+
+    <div class="result-box ai-resp" id="aiBox">
+        <div class="result-label">AI Response (WatsonX Granite)</div>
+        <div class="result-text" id="aiText"></div>
+    </div>
+</div>
+<script src="/static/script.js"></script>
+</body>
+</html>
