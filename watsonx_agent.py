@@ -25,7 +25,7 @@ def process_with_watsonx(transcript):
     }
 
     payload = {
-        "model_id": "ibm/granite-3-2b-instruct",  # ✅ smaller model (quota safe)
+        "model_id": "ibm/granite-3-3-8b-instruct",  # ✅ smaller model (quota safe)
         "project_id": os.getenv('WATSONX_PROJECT_ID'),
         "input": f"You are a helpful assistant. User said: {transcript}",
         "parameters": {
