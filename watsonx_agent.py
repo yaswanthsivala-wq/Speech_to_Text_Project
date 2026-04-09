@@ -25,11 +25,11 @@ def process_with_watsonx(transcript):
     }
 
     payload = {
-    "model_id": "ibm/granite-3-8b-instruct",
+        "model_id": "ibm/granite-3-2b-instruct",  # ✅ smaller model (quota safe)
         "project_id": os.getenv('WATSONX_PROJECT_ID'),
-        "input": f"User said: {transcript}. Respond clearly.",
+        "input": f"You are a helpful assistant. User said: {transcript}",
         "parameters": {
-            "max_new_tokens": 200,
+            "max_new_tokens": 50,   # ✅ reduced usage
             "temperature": 0.7
         }
     }

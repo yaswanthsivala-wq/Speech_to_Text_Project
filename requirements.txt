@@ -1,5 +1,6 @@
-flask==3.0.0
-ibm-watson==8.1.0
-ibm-cloud-sdk-core==3.18.0
-python-dotenv==1.0.0
-requests==2.31.0
+flask
+ibm-watson
+ibm-cloud-sdk-core
+python-dotenv
+requests
+gunicorn
