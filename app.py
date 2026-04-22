@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify, render_template
-from watson_stt import transcribe_audio
-from watsonx_agent import process_with_watsonx
+import requests
 import os
 
 app = Flask(__name__)
+
+# 🔑 Replace with your real values
+API_KEY = "a-4F4Xn8YjKwohp13bUpqknI3nhN2auGworWn4G2Xw-R"
+BASE_URL = "https://api.us-south.speech-to-text.watson.cloud.ibm.com/instances/2ca270d8-97d1-4a8d-964b-8f132bc9cadc"
 
 @app.route('/')
 def home():
@@ -17,28 +20,46 @@ def transcribe():
 
     audio_file = request.files['audio']
 
-    # Get correct file extension
-    original_filename = audio_file.filename or 'recording.webm'
-    extension = original_filename.rsplit('.', 1)[-1]
-    temp_path = f'temp_recording.{extension}'
-
+    # Save incoming file
+    temp_path = "recording.webm"
     audio_file.save(temp_path)
 
-    # ✅ IMPORTANT: get mime type from frontend
-    mime_type = request.form.get('mime_type', 'audio/webm')
-
     try:
-        transcript = transcribe_audio(temp_path, mime_type)
-        ai_response = process_with_watsonx(transcript)
+        print("👉 Sending audio to IBM STT...")
+
+        with open(temp_path, 'rb') as f:
+            response = requests.post(
+                f"{BASE_URL}/v1/recognize",
+                headers={
+                    "Content-Type": "audio/webm",
+                    "Accept": "application/json"
+                },
+                data=f,
+                auth=("apikey", API_KEY),
+                timeout=30
+            )
+
+        # 🔍 Debug response
+        print("👉 IBM RAW RESPONSE:", response.text)
+
+        result = response.json()
+
+        transcript = ""
+
+        if "results" in result and len(result["results"]) > 0:
+            transcript = result["results"][0]["alternatives"][0]["transcript"]
+
+        if transcript.strip() == "":
+            transcript = "⚠️ Could not recognize speech"
 
         return jsonify({
-            'success': True,
-            'transcript': transcript,
-            'ai_response': ai_response
+            "success": True,
+            "transcript": transcript
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print("❌ ERROR:", str(e))
+        return jsonify({"error": str(e)}), 500
 
     finally:
         if os.path.exists(temp_path):
@@ -46,5 +67,4 @@ def transcribe():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)

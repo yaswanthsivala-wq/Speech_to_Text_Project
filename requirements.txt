@@ -1,6 +1,5 @@
-flask
-ibm-watson
-ibm-cloud-sdk-core
-python-dotenv
+fastapi
+uvicorn
 requests
-gunicorn
+python-multipart
+python-dotenv
