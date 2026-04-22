@@ -26,38 +26,38 @@ def process_with_watsonx(context):
     try:
         token = get_iam_token()
 
-        url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
+        url = url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/chat?version=2023-05-29"
 
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-
         body = {
-            "input": f"""
-You are a helpful AI assistant.
-
-{context}
-
-Assistant:
-""",
-            "parameters": {
-                "decoding_method": "greedy",
-                "max_new_tokens": 300
-            },
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful AI assistant."
+                    },
+                {
+                    "role": "user",
+                    "content": context
+                    }
+                ],
+            "max_tokens": 200,
             "model_id": "ibm/granite-4-h-small",
             "project_id": PROJECT_ID
-        }
+}
 
         response = requests.post(url, headers=headers, json=body)
 
         result = response.json()
         print("👉 Watsonx RAW RESPONSE:", result)
-
-        if "results" in result:
-            return result["results"][0]["generated_text"]
-
+        
+        if "choices" in result:
+            return result["choices"][0]["message"]["content"]
+        
         return "⚠️ AI did not return valid response"
+
 
     except Exception as e:
         print("❌ Watsonx ERROR:", str(e))

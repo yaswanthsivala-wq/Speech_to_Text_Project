@@ -1,19 +1,10 @@
-console.log("Voice agent final version loaded");
+console.log("Voice agent FINAL full-record mode");
 
 let mediaRecorder;
 let audioChunks = [];
-let isActive = false;
 
-// 🎤 START
+// 🎤 START RECORDING (FULL MODE)
 async function startRecording() {
-    isActive = true;
-    loop();
-}
-
-// 🔁 LOOP (runs only once effectively)
-async function loop() {
-    if (!isActive) return;
-
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -31,79 +22,60 @@ async function loop() {
         // UI
         document.getElementById("recordBtn").style.display = "none";
         document.getElementById("stopBtn").style.display = "inline-block";
-        document.getElementById("statusText").innerText = "🎤 Listening...";
+        document.getElementById("statusText").innerText = "🎤 Recording... Speak freely";
         document.getElementById("pulseRing").classList.add("recording");
-
-        // ⏱️ Record for 3 sec
-        setTimeout(() => {
-            if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                mediaRecorder.stop();
-            }
-        }, 3000);
-
-        mediaRecorder.onstop = async () => {
-            try {
-                const blob = new Blob(audioChunks, { type: 'audio/webm' });
-
-                const formData = new FormData();
-                formData.append("audio", blob, "recording.webm");
-
-                const response = await fetch("/transcribe", {
-                    method: "POST",
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                // 📝 Show transcript + STOP LOOP
-                if (data.transcript && data.transcript.length > 3 &&
-                    data.transcript !== "⚠️ Could not recognize speech") {
-
-                    document.getElementById("transcriptText").innerText = data.transcript;
-                    document.getElementById("transcriptBox").style.display = "block";
-
-                    document.getElementById("aiText").innerText = data.ai_response;
-                    document.getElementById("aiBox").style.display = "block";
-
-                    // 🔥 STOP AFTER SUCCESS
-                    console.log("✅ Got response → stopping");
-
-                    isActive = false;
-
-                    document.getElementById("recordBtn").style.display = "inline-block";
-                    document.getElementById("stopBtn").style.display = "none";
-                    document.getElementById("statusText").innerText = "✅ Done. Click Start again";
-                    document.getElementById("pulseRing").classList.remove("recording");
-
-                    return; // ❗ STOP EVERYTHING
-                }
-
-                // ❌ DO NOT LOOP AGAIN (important)
-
-            } catch (err) {
-                console.error("Error:", err);
-                isActive = false;
-            }
-        };
 
     } catch (err) {
         console.error("Mic error:", err);
-        document.getElementById("statusText").innerText = "❌ Mic error";
+        document.getElementById("statusText").innerText = "❌ Mic access denied";
     }
 }
 
-// ⏹ STOP BUTTON
+// ⏹ STOP RECORDING (PROCESS FULL AUDIO)
 function stopRecording() {
-    isActive = false;
+    if (!mediaRecorder) return;
 
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-    }
+    mediaRecorder.stop();
 
-    document.getElementById("recordBtn").style.display = "inline-block";
-    document.getElementById("stopBtn").style.display = "none";
-    document.getElementById("statusText").innerText = "⏹ Stopped";
-    document.getElementById("pulseRing").classList.remove("recording");
+    document.getElementById("statusText").innerText = "⏳ Processing...";
 
-    console.log("🛑 Stopped manually");
+    mediaRecorder.onstop = async () => {
+        try {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+
+            const formData = new FormData();
+            formData.append("audio", blob, "recording.webm");
+
+            console.log("Sending full audio...");
+
+            const response = await fetch("/transcribe", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+            console.log("Response:", data);
+
+            // 📝 FULL TRANSCRIPT
+            document.getElementById("transcriptText").innerText = data.transcript;
+            document.getElementById("transcriptBox").style.display = "block";
+
+            // 🤖 AI RESPONSE
+            document.getElementById("aiText").innerText = data.ai_response;
+            document.getElementById("aiBox").style.display = "block";
+
+            // 🔁 RESET UI
+            document.getElementById("recordBtn").style.display = "inline-block";
+            document.getElementById("stopBtn").style.display = "none";
+            document.getElementById("statusText").innerText = "✅ Done. Click Start again";
+            document.getElementById("pulseRing").classList.remove("recording");
+
+        } catch (err) {
+            console.error("Error:", err);
+            document.getElementById("statusText").innerText = "❌ Error processing audio";
+
+            document.getElementById("recordBtn").style.display = "inline-block";
+            document.getElementById("stopBtn").style.display = "none";
+        }
+    };
 }
