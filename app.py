@@ -1,12 +1,13 @@
 from flask import Flask, request, jsonify, render_template
-import requests
 import os
+
+from watson_stt import transcribe_audio
+from watsonx_agent import process_with_watsonx
 
 app = Flask(__name__)
 
-# 🔑 Replace with your real values
-API_KEY = "a-4F4Xn8YjKwohp13bUpqknI3nhN2auGworWn4G2Xw-R"
-BASE_URL = "https://api.us-south.speech-to-text.watson.cloud.ibm.com/instances/2ca270d8-97d1-4a8d-964b-8f132bc9cadc"
+# 🧠 MEMORY
+conversation_history = []
 
 @app.route('/')
 def home():
@@ -20,41 +21,39 @@ def transcribe():
 
     audio_file = request.files['audio']
 
-    # Save incoming file
     temp_path = "recording.webm"
     audio_file.save(temp_path)
 
     try:
-        print("👉 Sending audio to IBM STT...")
+        print("👉 Transcribing using IBM SDK...")
 
-        with open(temp_path, 'rb') as f:
-            response = requests.post(
-                f"{BASE_URL}/v1/recognize",
-                headers={
-                    "Content-Type": "audio/webm",
-                    "Accept": "application/json"
-                },
-                data=f,
-                auth=("apikey", API_KEY),
-                timeout=30
-            )
+        transcript = transcribe_audio(temp_path, "audio/webm")
+        transcript = transcript.replace("%HESITATION", "").strip()
 
-        # 🔍 Debug response
-        print("👉 IBM RAW RESPONSE:", response.text)
-
-        result = response.json()
-
-        transcript = ""
-
-        if "results" in result and len(result["results"]) > 0:
-            transcript = result["results"][0]["alternatives"][0]["transcript"]
-
-        if transcript.strip() == "":
+        if transcript == "":
             transcript = "⚠️ Could not recognize speech"
+
+        print("📝 USER:", transcript)
+
+        # 🧠 ADD USER INPUT
+        conversation_history.append(f"User: {transcript}")
+
+        # 🔥 CONTEXT
+        context = "\n".join(conversation_history[-5:])
+
+        # 🤖 AI
+        ai_response = process_with_watsonx(context)
+        ai_response = ai_response.replace("Assistant:", "").strip()
+
+        print("🤖 AI:", ai_response)
+
+        # 🧠 SAVE AI RESPONSE
+        conversation_history.append(f"Assistant: {ai_response}")
 
         return jsonify({
             "success": True,
-            "transcript": transcript
+            "transcript": transcript,
+            "ai_response": ai_response
         })
 
     except Exception as e:
@@ -62,8 +61,11 @@ def transcribe():
         return jsonify({"error": str(e)}), 500
 
     finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception as e:
+            print("⚠️ File delete issue:", e)
 
 
 if __name__ == '__main__':

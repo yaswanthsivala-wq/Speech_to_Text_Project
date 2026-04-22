@@ -13,15 +13,20 @@ def transcribe_audio(audio_file_path, mime_type):
     with open(audio_file_path, 'rb') as audio_file:
         result = speech_to_text.recognize(
             audio=audio_file,
-            content_type=mime_type,  # ✅ dynamic
+            content_type=mime_type,
             model='en-US_BroadbandModel',
             smart_formatting=True,
-            word_confidence=True,
-            timestamps=True
+            word_confidence=False,   # 🔥 not needed → faster
+            timestamps=False         # 🔥 not needed → faster
         ).get_result()
 
     transcript = ""
+
     for chunk in result.get('results', []):
         transcript += chunk['alternatives'][0]['transcript'] + " "
 
-    return transcript.strip()
+    # 🔥 CLEAN TEXT
+    transcript = transcript.replace("%HESITATION", "")
+    transcript = transcript.strip()
+
+    return transcript

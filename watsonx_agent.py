@@ -4,43 +4,61 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+API_KEY = os.getenv("WATSONX_API_KEY")
+PROJECT_ID = os.getenv("WATSONX_PROJECT_ID")
+
+# 🔥 STEP 1 — GET IAM TOKEN
 def get_iam_token():
-    response = requests.post(
-        "https://iam.cloud.ibm.com/identity/token",
-        data={
-            "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
-            "apikey": os.getenv('WATSONX_API_KEY')
-        },
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
-    )
+    url = "https://iam.cloud.ibm.com/identity/token"
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = f"grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey={API_KEY}"
+
+    response = requests.post(url, headers=headers, data=data)
     return response.json()["access_token"]
 
 
-def process_with_watsonx(transcript):
-    token = get_iam_token()
+# 🔥 STEP 2 — CALL WATSONX
+def process_with_watsonx(context):
+    try:
+        token = get_iam_token()
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+        url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
 
-    payload = {
-        "model_id": "ibm/granite-13b-instruct-v2",  # ✅ smaller model (quota safe)
-        "project_id": os.getenv('WATSONX_PROJECT_ID'),
-        "input": f"You are a helpful assistant. User said: {transcript}",
-        "parameters": {
-            "max_new_tokens": 50,   # ✅ reduced usage
-            "temperature": 0.7
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
         }
-    }
 
-    response = requests.post(
-        f"{os.getenv('WATSONX_URL')}/ml/v1/text/generation?version=2023-05-29",
-        json=payload,
-        headers=headers
-    )
+        body = {
+            "input": f"""
+You are a helpful AI assistant.
 
-    if response.status_code != 200:
-        return f"Error: {response.text}"
+{context}
 
-    return response.json()['results'][0]['generated_text']
+Assistant:
+""",
+            "parameters": {
+                "decoding_method": "greedy",
+                "max_new_tokens": 300
+            },
+            "model_id": "ibm/granite-4-h-small",
+            "project_id": PROJECT_ID
+        }
+
+        response = requests.post(url, headers=headers, json=body)
+
+        result = response.json()
+        print("👉 Watsonx RAW RESPONSE:", result)
+
+        if "results" in result:
+            return result["results"][0]["generated_text"]
+
+        return "⚠️ AI did not return valid response"
+
+    except Exception as e:
+        print("❌ Watsonx ERROR:", str(e))
+        return "⚠️ AI processing error"
