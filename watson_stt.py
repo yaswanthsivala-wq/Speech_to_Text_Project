@@ -1,32 +1,33 @@
+from dotenv import load_dotenv
+load_dotenv()
 from ibm_watson import SpeechToTextV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+api_key = os.getenv("STT_API_KEY")
+url = os.getenv("STT_URL")
 
-def transcribe_audio(audio_file_path, mime_type):
-    authenticator = IAMAuthenticator(os.getenv('STT_API_KEY'))
-    speech_to_text = SpeechToTextV1(authenticator=authenticator)
-    speech_to_text.set_service_url(os.getenv('STT_URL'))
+authenticator = IAMAuthenticator(api_key)
+stt = SpeechToTextV1(authenticator=authenticator)
+stt.set_service_url(url)
 
-    with open(audio_file_path, 'rb') as audio_file:
-        result = speech_to_text.recognize(
+
+def transcribe_audio(file_path, content_type):
+
+    with open(file_path, "rb") as audio_file:
+
+        response = stt.recognize(
             audio=audio_file,
-            content_type=mime_type,
-            model='en-US_BroadbandModel',
+            content_type=content_type,
+            model="en-US_Multimedia",   # 🔥 BEST MODEL
             smart_formatting=True,
-            word_confidence=False,   # 🔥 not needed → faster
-            timestamps=False         # 🔥 not needed → faster
+            timestamps=False,
+            word_confidence=False
         ).get_result()
 
-    transcript = ""
+    text = ""
 
-    for chunk in result.get('results', []):
-        transcript += chunk['alternatives'][0]['transcript'] + " "
+    for res in response['results']:
+        text += res['alternatives'][0]['transcript']
 
-    # 🔥 CLEAN TEXT
-    transcript = transcript.replace("%HESITATION", "")
-    transcript = transcript.strip()
-
-    return transcript
+    return text.strip()

@@ -1,96 +1,107 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatsonX Voice Agent</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f4f4f4;
-            display: flex; align-items: center;
-            justify-content: center; min-height: 100vh;
-        }
-        .container {
-            background: white; border-radius: 16px;
-            padding: 40px; width: 100%; max-width: 680px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-        }
-        h1 { font-size: 22px; color: #161616; margin-bottom: 6px; }
-        .subtitle { font-size: 14px; color: #525252; margin-bottom: 28px; }
+<title>AI Insurance Agent</title>
 
-        .record-area {
-            display: flex; flex-direction: column;
-            align-items: center; gap: 16px;
-            padding: 28px; border: 2px dashed #e0e0e0;
-            border-radius: 12px; margin-bottom: 20px;
-        }
-        .pulse-ring {
-            width: 72px; height: 72px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 28px;
-            background: #f4f4f4; transition: all 0.3s;
-        }
-        .pulse-ring.recording {
-            background: #fff1f1; animation: pulse 1.2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(218,30,40,0.3); }
-            50% { box-shadow: 0 0 0 14px rgba(218,30,40,0); }
-        }
+<style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#0f172a;
+    color:white;
+}
 
-        .btn {
-            padding: 12px 28px; border: none; border-radius: 8px;
-            font-size: 15px; font-weight: 500; cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .btn:hover { opacity: 0.85; }
-        .btn-record  { background: #0f62fe; color: white; }
-        .btn-stop    { background: #da1e28; color: white; display: none; }
-        .btn-disabled { background: #c6c6c6; color: #6f6f6f; cursor: not-allowed; }
+.container {
+    display:flex;
+    height:100vh;
+}
 
-        #statusText { font-size: 13px; color: #525252; }
+.dashboard {
+    width:70%;
+    padding:20px;
+}
 
-        .result-box {
-            border-radius: 10px; padding: 16px 20px;
-            margin-top: 14px; display: none;
-        }
-        .result-box.transcript { background: #f0f4ff; border-left: 4px solid #0f62fe; }
-        .result-box.ai-resp    { background: #f0fff4; border-left: 4px solid #24a148; }
-        .result-label { font-size: 11px; font-weight: 600; text-transform: uppercase;
-                        letter-spacing: 0.5px; color: #525252; margin-bottom: 8px; }
-        .result-text  { font-size: 15px; color: #161616; line-height: 1.6; }
-    </style>
+.columns {
+    display:flex;
+    gap:10px;
+}
+
+.col {
+    background:#1e293b;
+    padding:10px;
+    border-radius:10px;
+    width:25%;
+}
+
+.card {
+    background:#334155;
+    padding:10px;
+    margin:10px 0;
+    border-radius:8px;
+}
+
+.chat {
+    width:30%;
+    border-left:1px solid #333;
+    display:flex;
+    flex-direction:column;
+}
+
+.messages {
+    flex:1;
+    overflow:auto;
+    padding:10px;
+}
+
+.input-bar {
+    display:flex;
+    padding:10px;
+    background:#1e293b;
+}
+
+button {
+    margin-left:5px;
+    padding:10px;
+    border:none;
+    border-radius:6px;
+    background:#3b82f6;
+    color:white;
+    cursor:pointer;
+}
+</style>
 </head>
+
 <body>
+
 <div class="container">
-    <h1>WatsonX Voice-to-Text Agent</h1>
-    <p class="subtitle">Powered by IBM Watson Speech to Text + WatsonX.ai Granite LLM</p>
 
-    <div class="record-area">
-        <div class="pulse-ring" id="pulseRing">🎙</div>
-        <div id="statusText">Press the button below and start speaking</div>
-        <div style="display:flex; gap:12px;">
-            <button class="btn btn-record" id="recordBtn" onclick="startRecording()">
-                Start Recording
-            </button>
-            <button class="btn btn-stop" id="stopBtn" onclick="stopRecording()"style="display:none;">
-                Stop & Transcribe
-            </button>
-        </div>
-    </div>
+<div class="dashboard">
+<h2>AI Insurance Dashboard</h2>
 
-    <div class="result-box transcript" id="transcriptBox">
-        <div class="result-label">You said (Watson STT)</div>
-        <div class="result-text" id="transcriptText"></div>
-    </div>
-
-    <div class="result-box ai-resp" id="aiBox">
-        <div class="result-label">AI Response (WatsonX Granite)</div>
-        <div class="result-text" id="aiText"></div>
-    </div>
+<div class="columns">
+<div class="col"><h3>Auto</h3><div id="auto"></div></div>
+<div class="col"><h3>Health</h3><div id="health"></div></div>
+<div class="col"><h3>Life</h3><div id="life"></div></div>
+<div class="col"><h3>Property</h3><div id="property"></div></div>
 </div>
+</div>
+
+<div class="chat">
+<div class="messages" id="messages"></div>
+
+<div class="input-bar">
+<input type="file" id="file" hidden>
+
+<button onclick="document.getElementById('file').click()">📁</button>
+<button onclick="startRecording()">🎤 Start</button>
+<button onclick="stopRecording()">⏹ Stop</button>
+<button onclick="upload()">⬆️</button>
+</div>
+</div>
+
+</div>
+
 <script src="/static/script.js"></script>
+
 </body>
 </html>

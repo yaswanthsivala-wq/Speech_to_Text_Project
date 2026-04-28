@@ -1,81 +1,160 @@
-console.log("Voice agent FINAL full-record mode");
+console.log("✅ JS Loaded");
 
-let mediaRecorder;
-let audioChunks = [];
+let recorder;
+let chunks = [];
 
-// 🎤 START RECORDING (FULL MODE)
-async function startRecording() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+/* =========================
+   MESSAGE
+========================= */
+function addMessage(text){
+    let msg = document.createElement("div");
+    msg.innerText = text;
+    document.getElementById("messages").appendChild(msg);
+}
 
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
+/* =========================
+   SPEAK
+========================= */
+function speak(text){
+    let speech = new SpeechSynthesisUtterance(text);
+    speechSynthesis.speak(speech);
+}
 
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                audioChunks.push(event.data);
-            }
-        };
+/* =========================
+   CREATE DASHBOARD CARD
+========================= */
+function addToDashboard(summary, type){
 
-        mediaRecorder.start();
+    let card = document.createElement("div");
+    card.className = "card";
+    card.innerText = summary;
 
-        // UI
-        document.getElementById("recordBtn").style.display = "none";
-        document.getElementById("stopBtn").style.display = "inline-block";
-        document.getElementById("statusText").innerText = "🎤 Recording... Speak freely";
-        document.getElementById("pulseRing").classList.add("recording");
+    let t = (type || "").toLowerCase();
 
-    } catch (err) {
-        console.error("Mic error:", err);
-        document.getElementById("statusText").innerText = "❌ Mic access denied";
+    if(t.includes("auto")){
+        document.getElementById("auto").appendChild(card);
+
+    } else if(t.includes("health")){
+        document.getElementById("health").appendChild(card);
+
+    } else if(t.includes("life")){
+        document.getElementById("life").appendChild(card);
+
+    } else {
+        document.getElementById("property").appendChild(card);
     }
 }
 
-// ⏹ STOP RECORDING (PROCESS FULL AUDIO)
-function stopRecording() {
-    if (!mediaRecorder) return;
+/* =========================
+   🎤 START RECORDING
+========================= */
+async function startRecording(){
 
-    mediaRecorder.stop();
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
 
-    document.getElementById("statusText").innerText = "⏳ Processing...";
+        recorder = new MediaRecorder(stream);
+        chunks = [];
 
-    mediaRecorder.onstop = async () => {
-        try {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        recorder.ondataavailable = e=>{
+            if(e.data.size>0) chunks.push(e.data);
+        };
 
-            const formData = new FormData();
-            formData.append("audio", blob, "recording.webm");
+        recorder.start();
 
-            console.log("Sending full audio...");
+        addMessage("🎤 Recording started...");
 
-            const response = await fetch("/transcribe", {
-                method: "POST",
-                body: formData
+    }catch(err){
+        console.error(err);
+        addMessage("❌ Mic permission denied");
+    }
+}
+
+/* =========================
+   ⏹ STOP RECORDING
+========================= */
+function stopRecording(){
+
+    if(!recorder){
+        alert("Start recording first");
+        return;
+    }
+
+    recorder.stop();
+
+    recorder.onstop = async ()=>{
+
+        addMessage("⏳ Processing...");
+
+        let blob = new Blob(chunks,{type:"audio/webm"});
+
+        let form = new FormData();
+        form.append("audio",blob,"recording.webm");
+
+        try{
+            const response = await fetch("/transcribe",{
+                method:"POST",
+                body:form
             });
 
             const data = await response.json();
-            console.log("Response:", data);
 
-            // 📝 FULL TRANSCRIPT
-            document.getElementById("transcriptText").innerText = data.transcript;
-            document.getElementById("transcriptBox").style.display = "block";
+            console.log("RESPONSE:", data);
 
-            // 🤖 AI RESPONSE
-            document.getElementById("aiText").innerText = data.ai_response;
-            document.getElementById("aiBox").style.display = "block";
+            // 🧑 Transcript
+            addMessage("🧑 You: " + data.transcript);
 
-            // 🔁 RESET UI
-            document.getElementById("recordBtn").style.display = "inline-block";
-            document.getElementById("stopBtn").style.display = "none";
-            document.getElementById("statusText").innerText = "✅ Done. Click Start again";
-            document.getElementById("pulseRing").classList.remove("recording");
+            // 📊 Summary
+            addMessage("📊 Summary: " + data.summary);
 
-        } catch (err) {
-            console.error("Error:", err);
-            document.getElementById("statusText").innerText = "❌ Error processing audio";
+            // 📊 Route to dashboard
+            addToDashboard(data.summary, data.type);
 
-            document.getElementById("recordBtn").style.display = "inline-block";
-            document.getElementById("stopBtn").style.display = "none";
+            // 🔊 Speak summary
+            speak(data.summary);
+
+        }catch(err){
+            console.error(err);
+            addMessage("❌ Error processing audio");
         }
     };
+}
+
+/* =========================
+   📁 FILE UPLOAD
+========================= */
+async function upload(){
+
+    let file = document.getElementById("file").files[0];
+
+    if(!file){
+        alert("Select file");
+        return;
+    }
+
+    let form = new FormData();
+    form.append("file",file);
+
+    addMessage("📁 Uploading...");
+
+    try{
+        const response = await fetch("/upload",{
+            method:"POST",
+            body:form
+        });
+
+        const data = await response.json();
+
+        console.log("UPLOAD RESPONSE:", data);
+
+        addMessage("📊 Summary: " + data.summary);
+
+        addToDashboard(data.summary, data.type);
+
+        speak(data.summary);
+
+    }catch(err){
+        console.error(err);
+        addMessage("❌ Upload failed");
+    }
 }
